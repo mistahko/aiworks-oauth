@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AIWORKS 로그인 중…</title>
+<style>
+  body { font-family: -apple-system, "Pretendard", sans-serif; background: #fff;
+         display: flex; flex-direction: column; align-items: center; justify-content: center;
+         height: 100vh; margin: 0; gap: 16px; }
+  .logo { font-size: 28px; font-weight: 800; letter-spacing: 2px; }
+  .logo .ai { color: #A9D400; }
+  p { color: #666; font-size: 14px; text-align: center; }
+  a.btn { background: #CEFF00; color: #111; padding: 14px 28px; border-radius: 12px;
+          font-weight: 700; text-decoration: none; font-size: 16px; }
+</style>
+</head>
+<body>
+  <div class="logo"><span class="ai">AI</span>WORKS</div>
+  <p>인증이 완료되었습니다.<br>앱으로 이동 중입니다…</p>
+  <a class="btn" id="open-app" href="#">앱으로 돌아가기</a>
+<script>
+  // 네이버웍스 인증 후 이 페이지로 리다이렉트되면, code/state를 그대로 앱 딥링크로 전달
+  var target = "com.aiworks.app://oauth/callback" + location.search;
+  document.getElementById("open-app").href = target;
+  location.href = target; // 자동 이동 (안 되면 위 버튼 사용)
+</script>
+</body>
+</html>
