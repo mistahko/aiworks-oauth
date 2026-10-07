@@ -3,27 +3,102 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="robots" content="noindex">
 <title>AIWORKS 로그인 중…</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css">
 <style>
-  body { font-family: -apple-system, "Pretendard", sans-serif; background: #fff;
-         display: flex; flex-direction: column; align-items: center; justify-content: center;
-         height: 100vh; margin: 0; gap: 16px; }
-  .logo { font-size: 28px; font-weight: 800; letter-spacing: 2px; }
-  .logo .ai { color: #A9D400; }
-  p { color: #666; font-size: 14px; text-align: center; }
-  a.btn { background: #CEFF00; color: #111; padding: 14px 28px; border-radius: 12px;
-          font-weight: 700; text-decoration: none; font-size: 16px; }
+  /* AIWORKS 앱 UI 토큰 (다크 기본, 라이트 시스템 설정 대응) */
+  :root {
+    --bg: #0B0C0E; --surface: #16181C; --border: #23262B;
+    --text: #FFFFFF; --text-sub: #9BA1A8;
+    --lime: #CEFF00; --lime-pressed: #A9D400; --error: #EF4444;
+  }
+  @media (prefers-color-scheme: light) {
+    :root { --bg: #FFFFFF; --surface: #F7F7F7; --border: #EEEEEE; --text: #111111; --text-sub: #666666; }
+  }
+  * { box-sizing: border-box; }
+  body {
+    font-family: "Pretendard", -apple-system, "Apple SD Gothic Neo", sans-serif;
+    background: var(--bg); color: var(--text);
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    min-height: 100vh; margin: 0; padding: 24px 16px; gap: 20px; text-align: center;
+  }
+  .logo { font-size: 32px; font-weight: 800; letter-spacing: 2px; }
+  .logo .ai { color: var(--lime); }
+  .slogan { margin-top: -14px; font-size: 12px; color: var(--text-sub); letter-spacing: .5px; }
+  .spinner {
+    width: 32px; height: 32px; border-radius: 50%;
+    border: 3px solid var(--border); border-top-color: var(--lime);
+    animation: spin .8s linear infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  h1 { font-size: 18px; font-weight: 600; margin: 0; }
+  p { color: var(--text-sub); font-size: 14px; line-height: 1.6; margin: 0; }
+  .err { color: var(--error); }
+  .btn {
+    display: inline-block; min-width: 220px; background: var(--lime); color: #111;
+    padding: 14px 28px; border-radius: 12px; font-weight: 700; font-size: 16px;
+    text-decoration: none; border: 0;
+  }
+  .btn:active { background: var(--lime-pressed); }
+  .hint { font-size: 12px; max-width: 320px; }
+  .hidden { display: none; }
 </style>
 </head>
 <body>
   <div class="logo"><span class="ai">AI</span>WORKS</div>
-  <p>인증이 완료되었습니다.<br>앱으로 이동 중입니다…</p>
+  <div class="slogan">smart works, better future</div>
+
+  <div class="spinner" id="spinner"></div>
+  <h1 id="title">인증이 완료되었습니다</h1>
+  <p id="msg">AIWORKS 앱으로 이동 중입니다…</p>
+
   <a class="btn" id="open-app" href="#">앱으로 돌아가기</a>
+  <p class="hint hidden" id="hint">앱이 자동으로 열리지 않으면 위 버튼을 눌러주세요.<br>
+    앱이 설치되어 있지 않다면 먼저 AIWORKS 앱을 설치해 주세요.</p>
+
 <script>
-  // 네이버웍스 인증 후 이 페이지로 리다이렉트되면, code/state를 그대로 앱 딥링크로 전달
-  var target = "com.aiworks.app://oauth/callback" + location.search;
-  document.getElementById("open-app").href = target;
-  location.href = target; // 자동 이동 (안 되면 위 버튼 사용)
+  // 네이버웍스 인증 후 이 페이지로 리다이렉트되면, code/state(또는 error)를 그대로 앱 딥링크로 전달한다.
+  var SCHEME = "com.aiworks.app";
+  var PATH = "oauth/callback";
+  var params = new URLSearchParams(location.search);
+  var query = location.search || "";
+
+  var $ = function (id) { return document.getElementById(id); };
+
+  if (params.get("error")) {
+    // 사용자가 동의를 거부했거나 인증 오류 — 앱에도 error를 그대로 넘겨 처리하게 한다
+    $("title").textContent = "인증에 실패했습니다";
+    $("title").classList.add("err");
+    $("msg").textContent = params.get("error_description") || params.get("error");
+  } else if (!params.get("code")) {
+    // 인증 코드 없이 직접 접근한 경우
+    $("spinner").classList.add("hidden");
+    $("title").textContent = "잘못된 접근입니다";
+    $("msg").textContent = "AIWORKS 앱에서 네이버웍스 로그인을 다시 시도해 주세요.";
+    $("open-app").classList.add("hidden");
+    query = null;
+  }
+
+  if (query !== null) {
+    var deepLink = SCHEME + "://" + PATH + query;
+    var isAndroid = /Android/i.test(navigator.userAgent);
+    // Android 일부 브라우저(인앱 브라우저 등)는 커스텀 스킴 직접 이동을 막으므로 intent:// 를 사용
+    var target = isAndroid
+      ? "intent://" + PATH + query + "#Intent;scheme=" + SCHEME + ";end"
+      : deepLink;
+
+    $("open-app").href = target;
+    location.href = target; // 자동 이동
+
+    // 일정 시간 후에도 페이지에 머물러 있으면 수동 이동 안내
+    setTimeout(function () {
+      if (document.visibilityState === "visible") {
+        $("spinner").classList.add("hidden");
+        $("hint").classList.remove("hidden");
+      }
+    }, 2000);
+  }
 </script>
 </body>
 </html>
